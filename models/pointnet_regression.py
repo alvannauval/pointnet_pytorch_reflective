@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from pointnet_utils import PointNetEncoder, feature_transform_reguliarzer
 
 class get_model(nn.Module):
-    def __init__(self, normal_channel=True): # Removed 'k' as it's now fixed to 2
+    def __init__(self, normal_channel=True):
         super(get_model, self).__init__()
         if normal_channel:
             channel = 6
@@ -14,7 +14,7 @@ class get_model(nn.Module):
         self.feat = PointNetEncoder(global_feat=True, feature_transform=True, channel=channel)
         self.fc1 = nn.Linear(1024, 512)
         self.fc2 = nn.Linear(512, 256)
-        self.fc3 = nn.Linear(256, 2) 
+        self.fc3 = nn.Linear(256, 1) 
         
         self.dropout = nn.Dropout(p=0.4)
         self.bn1 = nn.BatchNorm1d(512)
@@ -22,14 +22,18 @@ class get_model(nn.Module):
         self.relu = nn.ReLU()
 
     def forward(self, x):
-        x, trans, trans_feat = self.feat(x)
+        # 1. Receive the critical indices (crit_idx) from the encoder
+        # Ensure your pointnet_utils.py was updated to return 4 values!
+        x, trans, trans_feat, crit_idx = self.feat(x)
+        
         x = F.relu(self.bn1(self.fc1(x)))
         x = F.relu(self.bn2(self.dropout(self.fc2(x))))
         
-        # Regression Head: No activation or LogSoftmax
+        # Regression Head
         x = self.fc3(x) 
         
-        return x, trans_feat
+        # 2. Return crit_idx so you can use it in your plotting script
+        return x, trans_feat, crit_idx
 
 class get_loss(torch.nn.Module):
     def __init__(self, mat_diff_loss_scale=0.001):
@@ -37,11 +41,9 @@ class get_loss(torch.nn.Module):
         self.mat_diff_loss_scale = mat_diff_loss_scale
 
     def forward(self, pred, target, trans_feat):
-        # Use MSE for regression instead of nll_loss
+        # Reverting to MSE Loss to prevent mode-collapse on the noisy continuous labels
         loss = F.mse_loss(pred, target)
-        
-        # Keep the regularization loss for the spatial transformer
+        # loss = F.smooth_l1_loss(pred, target)
         mat_diff_loss = feature_transform_reguliarzer(trans_feat)
-
         total_loss = loss + mat_diff_loss * self.mat_diff_loss_scale
         return total_loss

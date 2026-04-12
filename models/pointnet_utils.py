@@ -124,10 +124,12 @@ class PointNetEncoder(nn.Module):
         pointfeat = x
         x = F.relu(self.bn2(self.conv2(x)))
         x = self.bn3(self.conv3(x))
-        x = torch.max(x, 2, keepdim=True)[0]
+        # x = torch.max(x, 2, keepdim=True)[0] # ori
+        x, crit_idx = torch.max(x, 2, keepdim=True) # edit
         x = x.view(-1, 1024)
         if self.global_feat:
-            return x, trans, trans_feat
+            # return x, trans, trans_feat
+            return x, trans, trans_feat, crit_idx
         else:
             x = x.view(-1, 1024, 1).repeat(1, 1, N)
             return torch.cat([x, pointfeat], 1), trans, trans_feat
@@ -140,3 +142,25 @@ def feature_transform_reguliarzer(trans):
         I = I.cuda()
     loss = torch.mean(torch.norm(torch.bmm(trans, trans.transpose(2, 1)) - I, dim=(1, 2)))
     return loss
+
+
+def get_point_features(self, x):
+        """Used for Upper-Bound Shape (NS) visualization."""
+        B, D, N = x.size()
+        # This is exactly the same as the first half of forward()
+        trans = self.stn(x)
+        x = x.transpose(2, 1)
+        if D > 3:
+            feature = x[:, :, 3:]
+            x = x[:, :, :3]
+        x = torch.bmm(x, trans)
+        if D > 3:
+            x = torch.cat([x, feature], dim=2)
+        x = x.transpose(2, 1)
+        x = F.relu(self.bn1(self.conv1(x)))
+        
+        # We go up to conv3 but STOP before the max pool
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = self.bn3(self.conv3(x))
+        
+        return x  # Returns [B, 1024, N] point-wise features
