@@ -114,4 +114,4 @@ dmypy.json
 .pyre/
 
 data/modelnet40_normal_resampled
-model_training_result/*
+personal_scribble/*
