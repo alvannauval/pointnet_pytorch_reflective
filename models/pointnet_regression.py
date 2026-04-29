@@ -32,8 +32,7 @@ class get_model(nn.Module):
         # Regression Head
         x = self.fc3(x) 
         
-        # 2. Return crit_idx so you can use it in your plotting script
-        return x, trans_feat, crit_idx
+        return x, trans_feat
 
 class get_loss(torch.nn.Module):
     def __init__(self, mat_diff_loss_scale=0.001):

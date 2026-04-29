@@ -21,8 +21,8 @@ class get_model(nn.Module):
         self.fc2 = nn.Linear(512, 256)
         self.bn2 = nn.BatchNorm1d(256)
         
-        # Instead of num_class, use 2 for the regression value (chamfer distance and asymmetry)
-        self.fc3 = nn.Linear(256, 2) 
+        # Instead of num_class, use 1 for the regression value (chamfer distance only)
+        self.fc3 = nn.Linear(256, 1) 
 
     def forward(self, xyz):
         B, _, _ = xyz.shape
@@ -43,7 +43,7 @@ class get_model(nn.Module):
         # Direct output, not using softmax (Regression). 
         x = self.fc3(x) 
 
-        return x, (l1_xyz, l1_points, l2_xyz, l2_points)
+        return x, l3_points
 
 
 
@@ -51,9 +51,9 @@ class get_loss(nn.Module):
     def __init__(self):
         super(get_loss, self).__init__()
 
-    def forward(self, pred, target, trans_feat=None):
-        # pred shape: [Batch_Size, 2]
-        # target shape: [Batch_Size, 2]
+    def forward(self, pred, target, trans_feat):
+        # pred shape: [Batch_Size, 1]
+        # target shape: [Batch_Size, 1]
         
         total_loss = F.mse_loss(pred, target)
         
