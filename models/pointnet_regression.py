@@ -7,7 +7,7 @@ class get_model(nn.Module):
     def __init__(self, normal_channel=True):
         super(get_model, self).__init__()
         if normal_channel:
-            channel = 6
+            channel = 7
         else:
             channel = 3
             

@@ -104,12 +104,25 @@ class PointNetEncoder(nn.Module):
         B, D, N = x.size()
         trans = self.stn(x)
         x = x.transpose(2, 1)
-        if D > 3:
+        
+        if D == 7:
+            # 7D Slice and Splice (XYZ, Normals, AoI)
+            xyz = x[:, :, 0:3]
+            normals = x[:, :, 3:6]
+            aoi = x[:, :, 6:7]
+            
+            xyz = torch.bmm(xyz, trans)
+            normals = torch.bmm(normals, trans)
+            
+            x = torch.cat([xyz, normals, aoi], dim=2)
+        elif D > 3:
             feature = x[:, :, 3:]
             x = x[:, :, :3]
-        x = torch.bmm(x, trans)
-        if D > 3:
+            x = torch.bmm(x, trans)
             x = torch.cat([x, feature], dim=2)
+        else:
+            x = torch.bmm(x, trans)
+            
         x = x.transpose(2, 1)
         x = F.relu(self.bn1(self.conv1(x)))
 
