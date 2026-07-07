@@ -115,3 +115,4 @@ dmypy.json
 
 data/modelnet40_normal_resampled
 personal_scribble/*
+*.pth
